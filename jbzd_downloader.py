@@ -29,8 +29,35 @@ def getImageFromUrl(url):
     return response.content
 
 def saveToFile(fileName, image):
-    with open("memes/" + fileName + ".jpg", "wb") as f:
+    cwd = os.getcwd()
+    filePath = os.path.join(cwd, "Memes", fileName) + ".jpg"
+    #finds a new name if the one is already taken with a different image
+    i = -1
+    while os.path.isfile(filePath):
+        #check if the files are the same
+        with open(filePath, "rb") as f:
+            if image == f.read():
+                if debug:
+                    if i == -1:
+                        print(f"File {fileName}.jpg already exists")
+                    else:
+                        print(f"File already exists and is called {fileName}({i}).jpg")
+                return False
+            else:
+                i += 1
+                filePath = os.path.join(cwd, "Memes", fileName + "(" + str(i)) + ").jpg"
+    if i > -1:
+        fileName = fileName + "(" + str(i) + ")"
+    
+    if not os.path.isdir(os.path.join(cwd, "Memes")):
+        if debug:
+            print("NO FOLDER \"Memes FOUND\". CREATING FOLDER \"Memes\"")
+        os.mkdir(os.path.join(cwd, "Memes"))
+
+    with open("Memes/" + fileName + ".jpg", "wb") as f:
         f.write(image)
+    return True
+
 
 def doEverythingForUrl(url):
     response = requests.get(url)
@@ -39,8 +66,8 @@ def doEverythingForUrl(url):
     title = getTitle(soup)
     image = getImageFromSoup(soup)
     if debug:
-        print("Saving \"" + title + "\" from" + url)
-    saveToFile(title, image)
+        if saveToFile(title, image):
+            print("Saved \"" + title + "\" from " + url)
 
 def getUrlsFromClipboard():
     urls = pyperclip.paste().replace("\r", "").split("\n")
@@ -61,11 +88,14 @@ def main():
     if "-c" in sys.argv:
         urls = getUrlsFromClipboard()
         memesUrls = filterUrls(urls)
-
-        if debug:
-            print("Urls:")
-            for memeUrl in memesUrls:
-                print(memeUrl)
+        if len(memesUrls) == 0:
+            print("No valid urls in clipboard")
+        else:
+            if debug:
+                print("Urls:")
+                for memeUrl in memesUrls:
+                    print(memeUrl)
+                print()
 
         for memeUrl in memesUrls:
             doEverythingForUrl(memeUrl)
