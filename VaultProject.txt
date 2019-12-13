@@ -1,0 +1,9 @@
+Each meme
+- Download time/ or not downloaded yet
+- Last time database Modification
+- Last time validity check
+- Time of checking likes
+- Title
+- Meme URL
+- Path to local photo file
+- Num of likes last time checked
