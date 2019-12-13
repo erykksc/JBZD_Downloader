@@ -76,10 +76,14 @@ def doEverythingForUrl(url, folderToCopyTo):
 
     title = getTitle(soup)
     title = filterIllegalchars(title)
-    image = getImageFromSoup(soup)
-    if saveToFile(title, image, folderToCopyTo):
+    try:
+        image = getImageFromSoup(soup)
+        if saveToFile(title, image, folderToCopyTo):
+            if DEBUG:
+                print("Saved \"" + title + "\" from " + url)
+    except:
         if DEBUG:
-            print("Saved \"" + title + "\" from " + url)
+            print("Error occured when saving \"" + title + "\" from " + url)
 
 def getUrlsFromClipboard():
     urls = pyperclip.paste().replace("\r", "").split("\n")
@@ -104,7 +108,7 @@ def main():
     if ("-c" in sysArgs) or len(sysArgs)==1:
         copyFromClipboard = True
 
-    for arg, i in zip(sysArgs, range(len(sysArgs))):
+    for i, arg in enumerate(sysArgs):
         if arg == "-f":
             for iChar in ILLEGAL_CHARS:
                 if iChar in sysArgs[i+1]:
