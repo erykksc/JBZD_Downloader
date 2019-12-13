@@ -43,8 +43,11 @@ articles = listening.find_all("article", {"class":"article"})
 
 memes = []
 for article in articles:
-    memes.append(Meme.memeFromArticle(article))
+    candidate = Meme.memeFromArticle(article)
+    if "#video" not in candidate._getTagsFromSoup():
+        memes.append(candidate)
 
 for meme in memes:
+    meme.download("D:\\GIT\\JBZD_Downloader\\MemeTest\\")
     print(meme)
     print()

@@ -84,7 +84,6 @@ class Meme:
 
     @staticmethod
     def memeFromArticle(article, autoDownload=True):
-        pyperclip.copy(str(article))
         url = article.find("a", {"class":"btn-send-messenger facebook-send article-action"})["data-url"]
         return Meme(url, autoDownload=autoDownload)
 
@@ -140,10 +139,22 @@ class Meme:
         readableHash = hashlib.sha256(f).hexdigest()
         return readableHash
 
+    def _getTagsFromSoup(self):
+        soup = self._getSoup()
+        tagsDict = soup.find("tags")[":tags"]
+        pyperclip.copy(str(tagsDict)[0])
+        div = soup.find("div", {"class": "article-tags"})
+        tagsA = div.find_all("a", {"class": "article-tag"})
+        tags = []
+        for tag in tagsA:
+            tags.append(tag.text)
+
     def download(self, folderPath):
         """
         Returns true if download successful
         """
+
+        #check if it is a video
         if folderPath == "":
             folderPath = os.getcwd() + "\\"
         soup = self._getSoup()
