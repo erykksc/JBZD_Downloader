@@ -2,38 +2,42 @@ import time
 import requests
 import hashlib
 import os
+import json
 from bs4 import BeautifulSoup
 
-import pyperclip
-class Meme:
-    def __init__(self, url, autoDownload=True):
-        self._soup = None
+def getHashOfFile(f):
+    # Read and update hash string value in blocks of 4K
+    readableHash = hashlib.sha256(f).hexdigest()
+    return readableHash
 
-        self._downloadTime = "UNKNOWN"
-        self._lastVCT = "UNKNOWN" #last validity check time
-        self._lastLCT = "UNKNOWN" #last likes check time
-        self._url = url
+class Meme:
+    def __init__(self, url, autoDownload=True, soup=None):
+        self._soup = soup
+
         self._title = "UNKNOWN"
+        self._id = None
+        self._url = url
+        self._tags = []
         self._path = "UNKNOWN"
         self._likes = "UNKNOWN"
-        self._id = None
+        self._downloadTime = "UNKNOWN"
         self._imageHash = "UNKNOWN"
 
-        if autoDownload:
+        if soup != None:
+            self._title = self._getTitleFromSoup()
+            self._likes = self._getLikesFromSoup()
+            self._id = self._getIdFromSoup()
+            self._tags = self._getTagsFromSoup()
+        elif autoDownload:
             response = requests.get(url)
             self._soup = BeautifulSoup(response.text, "html.parser")
             self._title = self._getTitleFromSoup()
             self._likes = self._getLikesFromSoup()
             self._id = self._getIdFromSoup()
+            self._tags = self._getTagsFromSoup()
 
     def getDownloadTime(self):
         return self._downloadTime
-    
-    def getLastVCT(self):
-        return self._lastVCT
-    
-    def getLastLCT(self):
-        return self._lastLCT
 
     def getUrl(self):
         return self._url
@@ -46,18 +50,40 @@ class Meme:
     
     def getPath(self):
         return self._path
+    
+    def getId(self):
+        return self._id
+    
+    def getImageHash(self):
+        return self._imageHash
+    
+    def getTags(self):
+        return self._tags
 
     def __repr__(self):
         outS = ""
-        outS += "title:" + str(self._title) + "\n"
-        outS += "Id:" + str(self._id) + "\n"
-        outS += "url:" + str(self._url) + "\n"
-        outS += "path:" + str(self._path) + "\n"
-        outS += "likes:" + str(self._likes) + "\n"
-        outS += "downloadTime:" + str(self._downloadTime) + "\n"
-        outS += "lastVCT:" + str(self._lastVCT) + "\n"
-        outS += "lastLCT:" + str(self._lastLCT)
+        outS += "title: " + str(self._title) + "\n"
+        outS += "id: " + str(self._id) + "\n"
+        outS += "url: " + str(self._url) + "\n"
+        outS += "tags: " + str(self._tags)
+        outS += "path: " + str(self._path) + "\n"
+        outS += "likes: " + str(self._likes) + "\n"
+        outS += "downloadTime: " + str(self._downloadTime) + "\n"
+        outS += "imageHash: " + str(self._imageHash) + "\n"
         return outS
+
+    def __dict__(self):
+        d = {
+            "title": self._title,
+            "id": self._id,
+            "url": self._url,
+            "tags": self._tags,
+            "path": self._path,
+            "likes": self._likes,
+            "download_time": self._downloadTime,
+            "image_hash": self._imageHash
+        }
+        return d
 
     def _getSoup(self):
         if self._soup == None:
@@ -83,9 +109,9 @@ class Meme:
         return int(Id)
 
     @staticmethod
-    def memeFromArticle(article, autoDownload=True):
+    def MemeFromArticle(article, autoDownload=True, soup=None):
         url = article.find("a", {"class":"btn-send-messenger facebook-send article-action"})["data-url"]
-        return Meme(url, autoDownload=autoDownload)
+        return Meme(url, autoDownload=autoDownload, soup=soup)
 
     @staticmethod
     def _filterWhiteSpaces(s):
@@ -107,16 +133,16 @@ class Meme:
     
     @staticmethod
     def _saveToFile(image, title, folderPath=""):
-        filePath = folderPath + title + ".jpg"
+        filePath = folderPath + "\\" + title + ".jpg"
         #finds a new name if the one is already taken with a different image
         i = -1
         while os.path.isfile(filePath):
             #check if the files are the same
             i += 1
-            filePath = folderPath + title + f"({i})" + ".jpg"
+            filePath = folderPath + "\\" + title + f"({i})" + ".jpg"
 
         if i > -1:
-            filePath = folderPath + title + f"({i})" + ".jpg"
+            filePath = folderPath + "\\" + title + f"({i})" + ".jpg"
 
 
         if not os.path.isdir(folderPath):
@@ -132,22 +158,15 @@ class Meme:
         for iChar in ILLEGAL_CHARS:
             title = title.replace(iChar, "")
         return title
-        
-    @staticmethod
-    def _getHashOfFile(f):
-        # Read and update hash string value in blocks of 4K
-        readableHash = hashlib.sha256(f).hexdigest()
-        return readableHash
 
     def _getTagsFromSoup(self):
         soup = self._getSoup()
         tagsDict = soup.find("tags")[":tags"]
-        pyperclip.copy(str(tagsDict)[0])
-        div = soup.find("div", {"class": "article-tags"})
-        tagsA = div.find_all("a", {"class": "article-tag"})
+        tagsDict = json.loads(tagsDict)
         tags = []
-        for tag in tagsA:
-            tags.append(tag.text)
+        for tag in tagsDict:
+            tags.append(tag["name"])
+        return tags
 
     def download(self, folderPath):
         """
@@ -155,20 +174,22 @@ class Meme:
         """
 
         #check if it is a video
-        if folderPath == "":
-            folderPath = os.getcwd() + "\\"
+        if folderPath[1] != ':':
+            folderPath = os.getcwd() + "\\" + folderPath
+
         soup = self._getSoup()
         classAI = soup.find("div", {"class":"article-image"})
         url = classAI.find("img")["src"]
 
         image = requests.get(url).content
-        self._imageHash = self._getHashOfFile(image)
+        self._imageHash = getHashOfFile(image)
         filePath = self._saveToFile(image, self._filterIllegalchars(self._title), folderPath)
         self._path = filePath
         self._downloadTime = time.strftime("%d/%m/%Y %H:%M:%S", time.localtime())
         return True
 
 if __name__ == "__main__":
-    m = Meme("https://jbzd.com.pl/obr/1206192/ze-co")
-    m.download("")
-    print(m)
+    m = Meme("https://jbzd.com.pl/obr/1206370/kontrola-bezpieczenstwa")
+    print(m.getTags())
+    x = m.__dict__()
+    pass

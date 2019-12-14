@@ -2,3 +2,5 @@
 /.vscode
 **.pyc
 **.jpg
+/__pycache__
+
