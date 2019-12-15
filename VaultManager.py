@@ -112,24 +112,22 @@ class VaultManager:
         for i, meme in enumerate(self._vault["memes"]):
             path = meme["path"]
             memeId = meme["id"]
+            modTime = _getTime()
             if path != "UNKNOWN":
                 if os.path.isfile(path):
                     with open(path, "rb") as f:
                         image = f.read()
                     if getHashOfFile(image) != meme["image_hash"]:
                         self._vault["memes"][i]["path"] = "MISSING"
-                        modTime = _getTime()
-                        self._vault["memes"][i]["last_path_validity_check"] = modTime
                         self._vault["memes"][i]["last_database_modification"] = modTime
                         if self._logLevel == 0:
                             print(Fore.YELLOW + f"Meme's {memeId} image doesn't exist" + Fore.RESET)
                 else:
                     self._vault["memes"][i]["path"] = "MISSING"
-                    modTime = _getTime()
-                    self._vault["memes"][i]["last_path_validity_check"] = modTime
                     self._vault["memes"][i]["last_database_modification"] = modTime
                     if self._logLevel == 0:
                         print(Fore.YELLOW + f"Meme's {memeId} image doesn't exist" + Fore.RESET)
+            self._vault["memes"][i]["last_path_validity_check"] = modTime
         self._saveVault()
     
     def downloadMissingImages(self, paths2Download=["MISSING", "UNKNOWN"]):

@@ -11,7 +11,7 @@ def getHashOfFile(f):
     return readableHash
 
 class Meme:
-    def __init__(self, url, autoDownload=True, soup=None):
+    def __init__(self, url, soup=None):
         self._soup = soup
 
         self._title = "UNKNOWN"
@@ -22,19 +22,21 @@ class Meme:
         self._likes = "UNKNOWN"
         self._downloadTime = "UNKNOWN"
         self._imageHash = "UNKNOWN"
+        self._imageUrl = None
 
         if soup != None:
             self._title = self._getTitleFromSoup()
             self._likes = self._getLikesFromSoup()
             self._id = self._getIdFromSoup()
             self._tags = self._getTagsFromSoup()
-        elif autoDownload:
+        else:
             response = requests.get(url)
             self._soup = BeautifulSoup(response.text, "html.parser")
             self._title = self._getTitleFromSoup()
             self._likes = self._getLikesFromSoup()
             self._id = self._getIdFromSoup()
             self._tags = self._getTagsFromSoup()
+            self._imageUrl = self._getImageUrlFromSoup()
 
     def getDownloadTime(self):
         return self._downloadTime
@@ -108,10 +110,19 @@ class Meme:
         Id = soup.find("vote")[":id"]
         return int(Id)
 
+    def _getImageUrlFromSoup(self):
+        soup = self._getSoup()
+        try:
+            classAI = soup.find("div", {"class":"article-image"})
+            url = classAI.find("img")["src"]
+        except:
+            url = "NOT FOUND"
+        return url
+
     @staticmethod
-    def MemeFromArticle(article, autoDownload=True, soup=None):
+    def MemeFromArticle(article, soup=None):
         url = article.find("a", {"class":"btn-send-messenger facebook-send article-action"})["data-url"]
-        return Meme(url, autoDownload=autoDownload, soup=soup)
+        return Meme(url, soup=soup)
 
     @staticmethod
     def _filterWhiteSpaces(s):
@@ -177,11 +188,7 @@ class Meme:
         if folderPath[1] != ':':
             folderPath = os.getcwd() + "\\" + folderPath
 
-        soup = self._getSoup()
-        classAI = soup.find("div", {"class":"article-image"})
-        url = classAI.find("img")["src"]
-
-        image = requests.get(url).content
+        image = requests.get(self._imageUrl).content
         self._imageHash = getHashOfFile(image)
         filePath = self._saveToFile(image, self._filterIllegalchars(self._title), folderPath)
         self._path = filePath

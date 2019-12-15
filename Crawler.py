@@ -26,6 +26,15 @@ class Crawler:
                 print(f"Crawling page number: {i}")
             self.checkPage(i)
             time.sleep(self._timeBetweenPageRequests)
+    
+    def crawlStart(self):
+        while True:
+            for i in range(self._pageRange[0], self._pageRange[1]+1):
+                if self._logLevel==0:
+                    print(f"Crawling page number: {i}")
+                self.checkPage(i)
+                time.sleep(self._timeBetweenPageRequests)
+            time.sleep(self._crawlingFrequency)
 
     def getMinLikes(self):
         return self._minLikes

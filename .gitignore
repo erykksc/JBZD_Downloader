@@ -4,3 +4,5 @@
 **.jpg
 /__pycache__
 
+*.pyc
+vault.json
